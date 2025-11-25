@@ -81,19 +81,19 @@ export const Desktop = () => {
     settings: { id: "settings", title: "Settings", icon: Settings, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
   });
 
-const desktopIcons = [
+  // Fixed Desktop Icons (Removed 'color' property)
+  const desktopIcons = [
     { id: 'bio', icon: User, label: 'Profile', position: { x: 20, y: 60 } },
-    { id: 'readme', icon: FileCode, label: 'README.md', position: { x: 20, y: 150 } },
-    { id: 'interests', icon: BrainCircuit, label: 'Brain.exe', position: { x: 20, y: 240 } },
-    { id: 'vscode', icon: Code, label: 'VS Code', position: { x: 20, y: 330 } },
-    { id: 'gallery', icon: Image, label: 'Gallery', position: { x: 20, y: 420 } },
-    { id: 'game', icon: Gamepad2, label: 'DevBreak', position: { x: 20, y: 510 } },
-    { id: 'terminal', icon: Terminal, label: 'Terminal', position: { x: 20, y: 600 } },
+    { id: 'readme', icon: FileCode, label: 'README.md', position: { x: 20, y: 140 } },
+    { id: 'interests', icon: BrainCircuit, label: 'Brain.exe', position: { x: 20, y: 220 } },
+    { id: 'vscode', icon: Code, label: 'VS Code', position: { x: 20, y: 300 } },
+    { id: 'gallery', icon: Image, label: 'Gallery', position: { x: 20, y: 380 } },
+    { id: 'game', icon: Gamepad2, label: 'DevBreak', position: { x: 20, y: 460 } },
+    { id: 'terminal', icon: Terminal, label: 'Terminal', position: { x: 20, y: 540 } },
   ];
 
   // --- EFFECTS ---
 
-  // Boot sequence
   useEffect(() => {
     if (bootStep < BOOT_SEQUENCE.length) {
       const t = setTimeout(() => setBootStep((p) => p + 1), 600);
@@ -103,13 +103,11 @@ const desktopIcons = [
     }
   }, [bootStep]);
 
-  // Initial Notification
   useEffect(() => { 
     const t = setTimeout(() => setNotification(true), 6000); 
     return () => clearTimeout(t); 
   }, []);
 
-  // Konami Code
   useEffect(() => {
     const konami = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
     let current = 0;
@@ -127,32 +125,26 @@ const desktopIcons = [
     return () => window.removeEventListener('keydown', handler);
   }, [unlock]);
 
-  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
-      // Close Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
         e.preventDefault();
         const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
         if (activeWindow) { closeWindow(activeWindow.id); addToast(`Closed ${activeWindow.title}`, 'info'); }
       }
-      // Minimize Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
         e.preventDefault();
         const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
         if (activeWindow) { minimizeWindow(activeWindow.id); addToast(`Minimized ${activeWindow.title}`, 'info'); }
       }
-      // Maximize Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
         const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
         if (activeWindow) maximizeWindow(activeWindow.id);
       }
-      // Toggle Start Menu
       if ((e.metaKey || e.ctrlKey) && e.key === ' ') {
         e.preventDefault(); setStartOpen(!startOpen);
       }
-      // Alt-Tab Switching (Simple)
       if (e.altKey && e.key === 'Tab') {
         e.preventDefault();
         const openWindows = Object.values(windows).filter(w => w.isOpen).sort((a, b) => b.z - a.z);
@@ -200,7 +192,6 @@ const desktopIcons = [
     setWindows((prev) => {
       const win = prev[id];
       const maxZ = Math.max(...Object.values(prev).map(w => w.z)) + 1;
-      
       if (win.isOpen && !win.isMinimized) { 
         play('click'); 
         return { ...prev, [id]: { ...win, isMinimized: true } }; 
@@ -218,23 +209,19 @@ const desktopIcons = [
     setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isOpen: false, isMinimized: false } })); 
     play('click'); 
   };
-  
   const minimizeWindow = (id: string) => { 
     setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMinimized: true } })); 
     play('click'); 
   };
-  
   const restoreWindow = (id: string) => { 
     const maxZ = Math.max(...Object.values(windows).map(w => w.z)) + 1; 
     setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMinimized: false, z: maxZ } })); 
     play('swoosh'); 
   };
-  
   const maximizeWindow = (id: string) => { 
     setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMaximized: !prev[id].isMaximized } })); 
     play('click'); 
   };
-  
   const focusWindow = (id: string) => { 
     setWindows((prev) => { 
       const maxZ = Math.max(...Object.values(prev).map(w => w.z)) + 1; 
@@ -273,7 +260,6 @@ const desktopIcons = [
       {/* LAYER 2: Physics & Particles */}
       <div className="absolute inset-0 z-0">
         <PhysicsOverlay />
-        {/* Only show skills overlay if NOT in zen mode, for better performance/view */}
         {!zenMode && <SkillsOverlay activeFilter={activeFilter} />}
       </div>
       
@@ -291,7 +277,7 @@ const desktopIcons = [
       
       <TopBar zenMode={zenMode} onToggleZen={() => setZenMode(!zenMode)} />
       
-      {/* --- INVISIBLE CONSTRAINT BOX FOR WINDOWS (Starts below TopBar) --- */}
+      {/* Constraint Box */}
       <div 
         ref={windowConstraintsRef} 
         className="fixed top-[40px] left-[-500px] right-[-500px] bottom-[-500px] pointer-events-none z-0" 
@@ -347,7 +333,7 @@ const desktopIcons = [
                 icon={icon.icon}
                 label={icon.label}
                 onClick={() => toggleWindow(icon.id)}
-                color={icon.color}
+                // REMOVED THE 'color' PROP HERE
                 defaultPosition={gravityEnabled ? { 
                   x: Math.random() * (window.innerWidth - 100), 
                   y: window.innerHeight - 100 
@@ -370,7 +356,7 @@ const desktopIcons = [
               onMaximize={maximizeWindow}
               onClick={() => focusWindow(win.id)}
               isActive={win.z === Math.max(...Object.values(windows).filter(w => w.isOpen && !w.isMinimized).map(w => w.z))}
-              dragConstraints={windowConstraintsRef} // Pass constraint reference
+              dragConstraints={windowConstraintsRef}
             >
               {win.id === "readme" && <ReadmeApp />}
               {win.id === "vscode" && <VSCodeApp />}
