@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Music, Palette, Gamepad2, BrainCircuit, Code, Cpu, FileCode, AlertTriangle,Bomb  } from "lucide-react";
+import { Music, Palette, Gamepad2, BrainCircuit, Code, Cpu, FileCode, AlertTriangle,Bomb, Settings } from "lucide-react";
 import { useSound } from "../contexts/SoundContext";
 
 export const StartMenu = ({ isOpen, onOpenWindow, toggleStart }: any) => {
@@ -33,7 +33,7 @@ export const StartMenu = ({ isOpen, onOpenWindow, toggleStart }: any) => {
         <button onClick={() => { onOpenWindow('bsod'); toggleStart(); play('click'); }} className="w-full text-left px-3 py-2 hover:bg-red-500/20 rounded text-red-400 text-sm flex items-center gap-3 group"><AlertTriangle size={16} className="group-hover:animate-bounce" /> Self Destruct</button>
       </div>
       <div className="p-2 bg-slate-950 border-t border-slate-800 flex justify-between">
-        <button className="text-xs text-slate-400 hover:text-white px-2 py-1">Settings</button>
+        <button onClick={() => { onOpenWindow('settings'); toggleStart(); play('click'); }} className="text-xs text-slate-400 hover:text-white px-2 py-1 flex items-center gap-2"><Settings size={14} />Settings</button>
         <button onClick={() => window.location.reload()} className="text-xs text-slate-400 hover:text-white px-2 py-1">Shut Down</button>
       </div>
     </motion.div>

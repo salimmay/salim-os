@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Terminal, User, Code, Image, Gamepad2, BrainCircuit, Music, Palette,
-  Cpu, FileCode, Bell, X, Zap, Mail, Layout,Bomb
+  Cpu, FileCode, Bell, X, Zap, Mail, Layout, Bomb, Settings
 } from "lucide-react";
 import { WindowState } from "../types";
 import { BOOT_SEQUENCE, BACKGROUND_COMPONENTS } from "../constants/data";
 import { useSound } from "../contexts/SoundContext";
 import { useAchievements } from "../contexts/AchievementsContext";
 import { useToast } from "../contexts/ToastContext";
+
+// Apps
 import { BSOD } from "../apps/BSOD";
 import { ReadmeApp } from "../apps/ReadmeApp";
 import { VSCodeApp } from "../apps/VSCodeApp";
@@ -24,15 +26,22 @@ import { PaintApp } from "../apps/PaintApp";
 import { CalculatorApp } from "../apps/CalculatorApp";
 import { CalendarApp } from "../apps/CalendarApp";
 import { NotepadApp } from "../apps/NotepadApp";
+import { MinesweeperApp } from "../apps/MinesweeperApp";
+import { SettingsApp } from "../apps/SettingsApp";
+
+// Components
 import { TopBar } from "./TopBar";
 import { StartMenu } from "./StartMenu";
 import { ContextMenu } from "./ContextMenu";
 import { DraggableDesktopIcon } from "./DraggableDesktopIcon";
 import { Window } from "./Window";
 import { DockIcon } from "./DockIcon";
-import { MinesweeperApp } from "../apps/MinesweeperApp";
 import { PhysicsOverlay } from "../PhysicsOverlay";
+import FilterLegend from "../features/skills/FilterLegend"; 
+import SkillsOverlay from "../features/skills/SkillsOverlay"; 
+
 export const Desktop = () => {
+  // --- STATE ---
   const [bootStep, setBootStep] = useState(0);
   const [booting, setBooting] = useState(true);
   const [notification, setNotification] = useState(false);
@@ -41,10 +50,20 @@ export const Desktop = () => {
   const [startOpen, setStartOpen] = useState(false);
   const [bsod, setBsod] = useState(false);
   const [gravityEnabled, setGravityEnabled] = useState(false);
+  
+  // Zen Mode & Filters
+  const [zenMode, setZenMode] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'frontend' | 'backend' | 'creative' | 'future' | null>(null);
+
+  // Refs
+  const windowConstraintsRef = useRef(null);
+
+  // Contexts
   const { play } = useSound();
   const { unlock } = useAchievements();
   const { addToast } = useToast();
 
+  // Windows State
   const [windows, setWindows] = useState<Record<string, WindowState>>({
     readme: { id: "readme", title: "README.md", icon: FileCode, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
     terminal: { id: "terminal", title: "Terminal", icon: Terminal, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
@@ -59,7 +78,20 @@ export const Desktop = () => {
     calendar: { id: "calendar", title: "Calendar", icon: Cpu, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
     notepad: { id: "notepad", title: "Notepad", icon: FileCode, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
     minesweeper: { id: "minesweeper", title: "Minesweeper", icon: Bomb, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
+    settings: { id: "settings", title: "Settings", icon: Settings, isOpen: false, isMinimized: false, isMaximized: false, z: 1 },
   });
+
+const desktopIcons = [
+    { id: 'bio', icon: User, label: 'Profile', position: { x: 20, y: 60 } },
+    { id: 'readme', icon: FileCode, label: 'README.md', position: { x: 20, y: 150 } },
+    { id: 'interests', icon: BrainCircuit, label: 'Brain.exe', position: { x: 20, y: 240 } },
+    { id: 'vscode', icon: Code, label: 'VS Code', position: { x: 20, y: 330 } },
+    { id: 'gallery', icon: Image, label: 'Gallery', position: { x: 20, y: 420 } },
+    { id: 'game', icon: Gamepad2, label: 'DevBreak', position: { x: 20, y: 510 } },
+    { id: 'terminal', icon: Terminal, label: 'Terminal', position: { x: 20, y: 600 } },
+  ];
+
+  // --- EFFECTS ---
 
   // Boot sequence
   useEffect(() => {
@@ -71,13 +103,13 @@ export const Desktop = () => {
     }
   }, [bootStep]);
 
-  // Notification
+  // Initial Notification
   useEffect(() => { 
     const t = setTimeout(() => setNotification(true), 6000); 
     return () => clearTimeout(t); 
   }, []);
 
-  // Konami code
+  // Konami Code
   useEffect(() => {
     const konami = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
     let current = 0;
@@ -95,71 +127,48 @@ export const Desktop = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [unlock]);
 
-  // Keyboard shortcuts
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyboard = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + W - Close active window
+      // Close Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
         e.preventDefault();
-        const activeWindow = Object.values(windows)
-          .filter(w => w.isOpen && !w.isMinimized)
-          .sort((a, b) => b.z - a.z)[0];
-        if (activeWindow) {
-          closeWindow(activeWindow.id);
-          addToast(`Closed ${activeWindow.title}`, 'info');
-        }
+        const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
+        if (activeWindow) { closeWindow(activeWindow.id); addToast(`Closed ${activeWindow.title}`, 'info'); }
       }
-
-      // Cmd/Ctrl + M - Minimize active window
+      // Minimize Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
         e.preventDefault();
-        const activeWindow = Object.values(windows)
-          .filter(w => w.isOpen && !w.isMinimized)
-          .sort((a, b) => b.z - a.z)[0];
-        if (activeWindow) {
-          minimizeWindow(activeWindow.id);
-          addToast(`Minimized ${activeWindow.title}`, 'info');
-        }
+        const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
+        if (activeWindow) { minimizeWindow(activeWindow.id); addToast(`Minimized ${activeWindow.title}`, 'info'); }
       }
-
-      // Cmd/Ctrl + F - Maximize/restore active window
+      // Maximize Active Window
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
-        const activeWindow = Object.values(windows)
-          .filter(w => w.isOpen && !w.isMinimized)
-          .sort((a, b) => b.z - a.z)[0];
-        if (activeWindow) {
-          maximizeWindow(activeWindow.id);
-        }
+        const activeWindow = Object.values(windows).filter(w => w.isOpen && !w.isMinimized).sort((a, b) => b.z - a.z)[0];
+        if (activeWindow) maximizeWindow(activeWindow.id);
       }
-
-      // Cmd/Ctrl + Space - Open start menu
+      // Toggle Start Menu
       if ((e.metaKey || e.ctrlKey) && e.key === ' ') {
-        e.preventDefault();
-        setStartOpen(!startOpen);
+        e.preventDefault(); setStartOpen(!startOpen);
       }
-
-      // Alt + Tab - Switch between windows (simplified)
+      // Alt-Tab Switching (Simple)
       if (e.altKey && e.key === 'Tab') {
         e.preventDefault();
-        const openWindows = Object.values(windows)
-          .filter(w => w.isOpen)
-          .sort((a, b) => b.z - a.z);
+        const openWindows = Object.values(windows).filter(w => w.isOpen).sort((a, b) => b.z - a.z);
         if (openWindows.length > 1) {
-          const currentActive = openWindows[0];
           const nextWindow = openWindows[1];
           focusWindow(nextWindow.id);
-          if (nextWindow.isMinimized) {
-            restoreWindow(nextWindow.id);
-          }
+          if (nextWindow.isMinimized) restoreWindow(nextWindow.id);
           addToast(`Switched to ${nextWindow.title}`, 'info');
         }
       }
     };
-
     window.addEventListener('keydown', handleKeyboard);
     return () => window.removeEventListener('keydown', handleKeyboard);
   }, [windows, startOpen, addToast]);
+
+  // --- HANDLERS ---
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -171,19 +180,16 @@ export const Desktop = () => {
     if (action === 'refresh') { 
       setBooting(true); 
       setBootStep(0); 
-      play('success');
+      play('success'); 
     }
     if (action === 'wallpaper') {
-      setWallpaperIndex(prev => {
-        const newIndex = (prev + 1) % BACKGROUND_COMPONENTS.length;
-        play('swoosh');
-        unlock('indecisive', 'Indecisive - Changed wallpaper');
-        return newIndex;
-      });
+      setWallpaperIndex(prev => (prev + 1) % BACKGROUND_COMPONENTS.length);
+      play('swoosh');
+      unlock('indecisive', 'Indecisive - Changed wallpaper');
     }
     if (action === 'vscode') toggleWindow('vscode');
     if (action === 'properties') {
-      addToast("System: SalimOS v1.0\\nKernel: React Next.js\\nMemory: 100% Creative Capacity\\nUptime: Forever", 'info');
+      addToast("System: SalimOS v2.0\\nKernel: React Next.js\\nMemory: 100% Creative Capacity", 'info');
       play('click');
     }
     setContextMenu(null);
@@ -191,99 +197,66 @@ export const Desktop = () => {
 
   const toggleWindow = (id: string) => {
     if (id === 'bsod') { setBsod(true); play('error'); return; }
-    
     setWindows((prev) => {
       const win = prev[id];
       const maxZ = Math.max(...Object.values(prev).map(w => w.z)) + 1;
       
-      if (win.isOpen && !win.isMinimized) {
-        // Window is open and visible - minimize it
-        play('click');
-        return { 
-          ...prev, 
-          [id]: { ...win, isMinimized: true } 
-        };
-      } else if (win.isOpen && win.isMinimized) {
-        // Window is minimized - restore and focus it
-        play('swoosh');
-        return { 
-          ...prev, 
-          [id]: { ...win, isMinimized: false, z: maxZ } 
-        };
-      } else {
-        // Window is closed - open it
-        play('swoosh');
-        return { 
-          ...prev, 
-          [id]: { ...win, isOpen: true, isMinimized: false, z: maxZ } 
-        };
+      if (win.isOpen && !win.isMinimized) { 
+        play('click'); 
+        return { ...prev, [id]: { ...win, isMinimized: true } }; 
+      } else if (win.isOpen && win.isMinimized) { 
+        play('swoosh'); 
+        return { ...prev, [id]: { ...win, isMinimized: false, z: maxZ } }; 
+      } else { 
+        play('swoosh'); 
+        return { ...prev, [id]: { ...win, isOpen: true, isMinimized: false, z: maxZ } }; 
       }
     });
   };
 
-  const closeWindow = (id: string) => {
-    setWindows((prev) => ({ 
-      ...prev, 
-      [id]: { ...prev[id], isOpen: false, isMinimized: false } 
-    }));
-    play('click');
+  const closeWindow = (id: string) => { 
+    setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isOpen: false, isMinimized: false } })); 
+    play('click'); 
   };
-
-  const minimizeWindow = (id: string) => {
-    setWindows((prev) => ({ 
-      ...prev, 
-      [id]: { ...prev[id], isMinimized: true } 
-    }));
-    play('click');
+  
+  const minimizeWindow = (id: string) => { 
+    setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMinimized: true } })); 
+    play('click'); 
   };
-
-  const restoreWindow = (id: string) => {
-    const maxZ = Math.max(...Object.values(windows).map(w => w.z)) + 1;
-    setWindows((prev) => ({ 
-      ...prev, 
-      [id]: { ...prev[id], isMinimized: false, z: maxZ } 
-    }));
-    play('swoosh');
+  
+  const restoreWindow = (id: string) => { 
+    const maxZ = Math.max(...Object.values(windows).map(w => w.z)) + 1; 
+    setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMinimized: false, z: maxZ } })); 
+    play('swoosh'); 
   };
-
-  const maximizeWindow = (id: string) => {
-    setWindows((prev) => ({ 
-      ...prev, 
-      [id]: { ...prev[id], isMaximized: !prev[id].isMaximized } 
-    }));
-    play('click');
+  
+  const maximizeWindow = (id: string) => { 
+    setWindows((prev) => ({ ...prev, [id]: { ...prev[id], isMaximized: !prev[id].isMaximized } })); 
+    play('click'); 
   };
-
-  const focusWindow = (id: string) => {
-    setWindows((prev) => {
-      const maxZ = Math.max(...Object.values(prev).map(w => w.z)) + 1;
-      return { ...prev, [id]: { ...prev[id], z: maxZ } };
-    });
+  
+  const focusWindow = (id: string) => { 
+    setWindows((prev) => { 
+      const maxZ = Math.max(...Object.values(prev).map(w => w.z)) + 1; 
+      return { ...prev, [id]: { ...prev[id], z: maxZ } }; 
+    }); 
   };
 
   const toggleGravity = () => {
     setGravityEnabled(!gravityEnabled);
     play('click');
-    if (!gravityEnabled) {
-      unlock('physics_master', 'Physics Master - Enabled gravity');
-    }
+    if (!gravityEnabled) unlock('physics_master', 'Physics Master - Enabled gravity');
   };
-
-  const desktopIcons = [
-    { id: 'bio', icon: User, label: 'Profile', color: 'bg-purple-600', position: { x: 20, y: 20 } },
-    { id: 'readme', icon: FileCode, label: 'README.md', color: 'bg-slate-500', position: { x: 20, y: 100 } },
-    { id: 'interests', icon: BrainCircuit, label: 'Brain.exe', color: 'bg-teal-600', position: { x: 20, y: 180 } },
-    { id: 'vscode', icon: Code, label: 'VS Code', color: 'bg-blue-600', position: { x: 20, y: 260 } },
-    { id: 'gallery', icon: Image, label: 'Gallery', color: 'bg-indigo-600', position: { x: 20, y: 340 } },
-    { id: 'game', icon: Gamepad2, label: 'DevBreak', color: 'bg-emerald-600', position: { x: 20, y: 420 } },
-    { id: 'terminal', icon: Terminal, label: 'Terminal', color: 'bg-slate-800', position: { x: 20, y: 500 } },
-  ];
 
   const ActiveWallpaper = BACKGROUND_COMPONENTS[wallpaperIndex];
 
   if (booting) return (
     <div className="fixed inset-0 bg-black text-green-500 font-mono p-8 flex flex-col justify-end z-[100]">
-      {BOOT_SEQUENCE.slice(0, bootStep).map((txt, i) => <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-1">{`> ${txt}`}</motion.div>)}
+      {BOOT_SEQUENCE.slice(0, bootStep).map((txt, i) => (
+        <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-1">
+          {`> ${txt}`}
+        </motion.div>
+      ))}
     </div>
   );
 
@@ -291,25 +264,53 @@ export const Desktop = () => {
 
   return (
     <div className="fixed inset-0 overflow-hidden font-sans select-none bg-slate-950" onContextMenu={handleContextMenu}>
-      {/* LAYER 1: Pure Visual Background (Changes on click) */}
+      
+      {/* LAYER 1: Background */}
       <div className="absolute inset-0 -z-10">
          <ActiveWallpaper />
       </div>
 
-      {/* LAYER 2: Interactive Physics (Always present) */}
+      {/* LAYER 2: Physics & Particles */}
       <div className="absolute inset-0 z-0">
-         <PhysicsOverlay />
+        <PhysicsOverlay />
+        {/* Only show skills overlay if NOT in zen mode, for better performance/view */}
+        {!zenMode && <SkillsOverlay activeFilter={activeFilter} />}
       </div>
+      
+      {/* LAYER 2.5: Filter Legend (Hidden in Zen Mode) */}
+      <AnimatePresence>
+        {!zenMode && (
+          <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }}>
+             <FilterLegend activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* LAYER 3: Overlays & UI */}
+      {/* LAYER 3: UI Container */}
       <div className="absolute inset-0 bg-black/10 pointer-events-none z-0" />
-      <TopBar />
-      {/* Keyboard shortcuts hint */}
-      <div className="fixed top-12 right-4 z-10 text-[10px] text-white/20 font-mono select-none pointer-events-none hidden md:block">
-        <div>⌘W: Close | ⌘M: Minimize | ⌘F: Maximize</div>
-        <div>⌘Space: Start Menu | Alt+Tab: Switch</div>
-      </div>
+      
+      <TopBar zenMode={zenMode} onToggleZen={() => setZenMode(!zenMode)} />
+      
+      {/* --- INVISIBLE CONSTRAINT BOX FOR WINDOWS (Starts below TopBar) --- */}
+      <div 
+        ref={windowConstraintsRef} 
+        className="fixed top-[40px] left-[-500px] right-[-500px] bottom-[-500px] pointer-events-none z-0" 
+      />
 
+      {/* Hint Text */}
+      <AnimatePresence>
+        {!zenMode && (
+          <motion.div 
+             initial={{ opacity: 1 }} exit={{ opacity: 0 }}
+             className="fixed top-12 right-4 z-10 text-[10px] text-white/20 font-mono select-none pointer-events-none hidden md:block"
+          >
+            <div>⌘W: Close | ⌘M: Minimize | ⌘F: Maximize</div>
+            <div>⌘Space: Start Menu | Alt+Tab: Switch</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notifications & Menus */}
       <AnimatePresence>
         {notification && (
           <motion.div
@@ -332,21 +333,30 @@ export const Desktop = () => {
       </AnimatePresence>
 
       {/* Desktop Icons */}
-      <div className="absolute inset-0 z-10 pointer-events-none">
-        {desktopIcons.map(icon => (
-          <DraggableDesktopIcon
-            key={icon.id}
-            icon={icon.icon}
-            label={icon.label}
-            onClick={() => toggleWindow(icon.id)}
-            color={icon.color}
-            defaultPosition={gravityEnabled ? { 
-              x: Math.random() * (window.innerWidth - 100), 
-              y: window.innerHeight - 100 
-            } : icon.position}
-          />
-        ))}
-      </div>
+      <AnimatePresence>
+        {!zenMode && (
+          <motion.div 
+             className="absolute inset-0 z-10 pointer-events-none"
+             initial={{ opacity: 1 }}
+             exit={{ opacity: 0, filter: "blur(10px)" }}
+             transition={{ duration: 0.5 }}
+          >
+            {desktopIcons.map(icon => (
+              <DraggableDesktopIcon
+                key={icon.id}
+                icon={icon.icon}
+                label={icon.label}
+                onClick={() => toggleWindow(icon.id)}
+                color={icon.color}
+                defaultPosition={gravityEnabled ? { 
+                  x: Math.random() * (window.innerWidth - 100), 
+                  y: window.innerHeight - 100 
+                } : icon.position}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Windows */}
       <div className="absolute inset-0 z-20 pointer-events-none">
@@ -360,6 +370,7 @@ export const Desktop = () => {
               onMaximize={maximizeWindow}
               onClick={() => focusWindow(win.id)}
               isActive={win.z === Math.max(...Object.values(windows).filter(w => w.isOpen && !w.isMinimized).map(w => w.z))}
+              dragConstraints={windowConstraintsRef} // Pass constraint reference
             >
               {win.id === "readme" && <ReadmeApp />}
               {win.id === "vscode" && <VSCodeApp />}
@@ -374,35 +385,45 @@ export const Desktop = () => {
               {win.id === "calendar" && <CalendarApp />}
               {win.id === "notepad" && <NotepadApp />}
               {win.id === "minesweeper" && <MinesweeperApp />}
+              {win.id === "settings" && <SettingsApp />}
             </Window>
           ))}
         </AnimatePresence>
       </div>
 
       {/* Dock */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 h-16 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center gap-3 shadow-2xl z-[80] w-max max-w-[90vw] overflow-x-auto overflow-y-hidden pointer-events-auto">
-        <button 
-          onClick={() => { setStartOpen(!startOpen); play('click'); }} 
-          className={`p-3 rounded-lg transition-all mr-2 ${startOpen ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-blue-400 hover:bg-slate-700'}`}
-        >
-          <Layout size={24} />
-        </button>
-        <div className="w-px h-8 bg-white/20 mx-1 shrink-0" />
-        
-        <DockIcon icon={User} label="Profile" isOpen={windows.bio.isOpen} isMinimized={windows.bio.isMinimized} onClick={() => toggleWindow("bio")} onClose={() => closeWindow("bio")} />
-        <DockIcon icon={FileCode} label="README" isOpen={windows.readme.isOpen} isMinimized={windows.readme.isMinimized} onClick={() => toggleWindow("readme")} onClose={() => closeWindow("readme")} />
-        <DockIcon icon={BrainCircuit} label="Interests" isOpen={windows.interests.isOpen} isMinimized={windows.interests.isMinimized} onClick={() => toggleWindow("interests")} onClose={() => closeWindow("interests")} />
-        <DockIcon icon={Code} label="VS Code" isOpen={windows.vscode.isOpen} isMinimized={windows.vscode.isMinimized} onClick={() => toggleWindow("vscode")} onClose={() => closeWindow("vscode")} />
-        <DockIcon icon={Image} label="Gallery" isOpen={windows.gallery.isOpen} isMinimized={windows.gallery.isMinimized} onClick={() => toggleWindow("gallery")} onClose={() => closeWindow("gallery")} />
-        <DockIcon icon={Gamepad2} label="Snake Game" isOpen={windows.game.isOpen} isMinimized={windows.game.isMinimized} onClick={() => toggleWindow("game")} onClose={() => closeWindow("game")} />
-        <DockIcon icon={Terminal} label="Terminal" isOpen={windows.terminal.isOpen} isMinimized={windows.terminal.isMinimized} onClick={() => toggleWindow("terminal")} onClose={() => closeWindow("terminal")} />
-        
-        <div className="w-px h-8 bg-white/20 mx-1 shrink-0" />
-        <button onClick={toggleGravity} className={`p-2 rounded-lg transition-colors ${gravityEnabled ? 'bg-yellow-600 text-white' : 'bg-slate-700 hover:bg-slate-500 text-white'}`}>
-          <Zap size={20} />
-        </button>
-        <a href="mailto:maysalimp@gmail.com" className="p-2 rounded-lg bg-slate-700 hover:bg-slate-500 transition-colors text-white"><Mail size={20} /></a>
-      </div>
+      <AnimatePresence>
+        {!zenMode && (
+          <motion.div 
+             initial={{ y: 0, opacity: 1 }}
+             exit={{ y: 100, opacity: 0 }}
+             transition={{ duration: 0.5 }}
+             className="fixed bottom-4 left-1/2 -translate-x-1/2 h-16 px-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center gap-3 shadow-2xl z-[80] w-max max-w-[90vw] overflow-x-auto overflow-y-hidden pointer-events-auto"
+          >
+            <button 
+              onClick={() => { setStartOpen(!startOpen); play('click'); }} 
+              className={`p-3 rounded-lg transition-all mr-2 ${startOpen ? 'bg-blue-600 text-white' : 'bg-slate-800/80 text-blue-400 hover:bg-slate-700'}`}
+            >
+              <Layout size={24} />
+            </button>
+            <div className="w-px h-8 bg-white/20 mx-1 shrink-0" />
+            
+            <DockIcon icon={User} label="Profile" isOpen={windows.bio.isOpen} isMinimized={windows.bio.isMinimized} onClick={() => toggleWindow("bio")} onClose={() => closeWindow("bio")} />
+            <DockIcon icon={FileCode} label="README" isOpen={windows.readme.isOpen} isMinimized={windows.readme.isMinimized} onClick={() => toggleWindow("readme")} onClose={() => closeWindow("readme")} />
+            <DockIcon icon={BrainCircuit} label="Interests" isOpen={windows.interests.isOpen} isMinimized={windows.interests.isMinimized} onClick={() => toggleWindow("interests")} onClose={() => closeWindow("interests")} />
+            <DockIcon icon={Code} label="VS Code" isOpen={windows.vscode.isOpen} isMinimized={windows.vscode.isMinimized} onClick={() => toggleWindow("vscode")} onClose={() => closeWindow("vscode")} />
+            <DockIcon icon={Image} label="Gallery" isOpen={windows.gallery.isOpen} isMinimized={windows.gallery.isMinimized} onClick={() => toggleWindow("gallery")} onClose={() => closeWindow("gallery")} />
+            <DockIcon icon={Gamepad2} label="Snake Game" isOpen={windows.game.isOpen} isMinimized={windows.game.isMinimized} onClick={() => toggleWindow("game")} onClose={() => closeWindow("game")} />
+            <DockIcon icon={Terminal} label="Terminal" isOpen={windows.terminal.isOpen} isMinimized={windows.terminal.isMinimized} onClick={() => toggleWindow("terminal")} onClose={() => closeWindow("terminal")} />
+            
+            <div className="w-px h-8 bg-white/20 mx-1 shrink-0" />
+            <button onClick={toggleGravity} className={`p-2 rounded-lg transition-colors ${gravityEnabled ? 'bg-yellow-600 text-white' : 'bg-slate-700 hover:bg-slate-500 text-white'}`}>
+              <Zap size={20} />
+            </button>
+            <a href="mailto:maysalimp@gmail.com" className="p-2 rounded-lg bg-slate-700 hover:bg-slate-500 transition-colors text-white"><Mail size={20} /></a>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

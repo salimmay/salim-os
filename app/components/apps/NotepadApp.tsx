@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSound } from "../contexts/SoundContext";
 
 export const NotepadApp = () => {
-  const [text, setText] = useState("TODO:\n- Hire Salim\n- Check out his GitHub\n- Drink Coffee");
+  const [text, setText] = useState("TODO:\n- Hire Salim\n- Check out his GitHub\n- Drink Coffee \n- 'KONAMI' 'UPUPDOWNDOWN', 'SALIM', 'GODMODE', 'SUDO'\n- 'RESET', 'EXIT', 'CLEAR', 'NORMAL', 'OFF'\n 1234 ");
   const { play } = useSound();
 
   return (

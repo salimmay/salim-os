@@ -1,17 +1,20 @@
-import Background1 from "../../bg1";
-import Background2 from "../../bg2";
-import Background3 from "../../bg3";
-import Background4 from "../../bg4";
-import Background5 from "../../bg5";
-import SaiyanBackground from "../../bg6";
-
+import Background1 from "../../Backgrounds/bg1";
+import Background2 from "../../Backgrounds/bg2";
+import Background3 from "../../Backgrounds/bg3";
+import Background4 from "../../Backgrounds/bg4";
+import Background5 from "../../Backgrounds/bg5";
+import Background6 from "../../Backgrounds/bg6";
+import Background7 from "../../Backgrounds/bg7";
+import Background8 from "../../Backgrounds/bg8";
 export const BACKGROUND_COMPONENTS = [
   Background1,// Simple
   Background2,// Space
   Background3,// The Singularity
   Background4,// Black hole
   Background5,// Hex Grid
-  SaiyanBackground,
+  Background6,//SaiyanBackground
+  Background7,//Mecha Cockpit / Itano Circus
+  Background8,//The Void Ronin
 ];
 
 export const BOOT_SEQUENCE = [
@@ -82,7 +85,7 @@ export const WIFI_NETWORKS = [
   { ssid: "LinkedIn_Corp", signal: 3, security: "WPA2", url: "https://linkedin.com/in/salim-may-456a271a3", type: "linkedin" },
   { ssid: "Behance_Creative", signal: 4, security: "WPA2", url: "https://behance.net/SalimMaytn", type: "behance" },
   { ssid: "Email_Server", signal: 5, security: "WPA3", url: "mailto:maysalimp@gmail.com", type: "email" },
-  { ssid: "Portfolio_Main", signal: 4, security: "WPA2", url: "#", type: "portfolio" }
+  { ssid: "Portfolio_Main", signal: 4, security: "WPA2", url: "https://salimmay-portfolio.vercel.app/", type: "portfolio" }
 ];
 
 export const FILE_SYSTEM = {
